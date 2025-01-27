@@ -39,7 +39,7 @@ class DepthProConfig:
 DEFAULT_MONODEPTH_CONFIG_DICT = DepthProConfig(
     patch_encoder_preset="dinov2l16_384",
     image_encoder_preset="dinov2l16_384",
-    checkpoint_uri="./checkpoints/depth_pro.pt",
+    checkpoint_uri="/home/grand_tour_depth_benchmark/third_parties/ml-depth-pro_grandtour/checkpoints/depth_pro.pt", # /home/ml-depth-pro/checkpoints/depth_pro.pt
     decoder_features=256,
     use_fov_head=True,
     fov_encoder_preset="dinov2l16_384",

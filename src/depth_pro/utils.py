@@ -45,7 +45,7 @@ def fpx_from_f35(width: float, height: float, f_mm: float = 50) -> float:
 
 
 def load_rgb(
-    path: Union[Path, str], auto_rotate: bool = True, remove_alpha: bool = True
+    img_pil, auto_rotate: bool = True, remove_alpha: bool = True
 ) -> Tuple[np.ndarray, List[bytes], float]:
     """Load an RGB image.
 
@@ -62,14 +62,14 @@ def load_rgb(
         f_px: The optional focal length in pixels, extracting from the exif data.
 
     """
-    LOGGER.debug(f"Loading image {path} ...")
+    # LOGGER.debug(f"Loading image {path} ...")
 
-    path = Path(path)
-    if path.suffix.lower() in [".heic"]:
-        heif_file = pillow_heif.open_heif(path, convert_hdr_to_8bit=True)
-        img_pil = heif_file.to_pillow()
-    else:
-        img_pil = Image.open(path)
+    # path = Path(path)
+    # if path.suffix.lower() in [".heic"]:
+    #     heif_file = pillow_heif.open_heif(path, convert_hdr_to_8bit=True)
+    #     img_pil = heif_file.to_pillow()
+    # else:
+    #     img_pil = Image.open(path)
 
     img_exif = extract_exif(img_pil)
     icc_profile = img_pil.info.get("icc_profile", None)
