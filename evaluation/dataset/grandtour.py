@@ -39,7 +39,7 @@ class GRANDTOUR(Dataset):
         image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) / 255.0
         
-        depth = cv2.imread(depth_path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH) / 1000.0  # cm to m
+        depth = cv2.imread(depth_path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH) / 1000.0  # mm to m
         if depth.ndim == 3:
             depth = depth[:, :, 0] 
         depth = depth.squeeze()
