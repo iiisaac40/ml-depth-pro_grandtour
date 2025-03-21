@@ -27,6 +27,7 @@ from util.utils import init_log
 
 import depth_pro
 
+import csv
 import os
 import sys
 sys.path.append('/home/grand_tour_depth_benchmark/utils')
@@ -63,7 +64,8 @@ parser = argparse.ArgumentParser(description='Depth Anything V2 for Metric Depth
 parser.add_argument('--dataset', default='grandtour', choices=['hypersim', 'vkitti', 'grandtour'])
 parser.add_argument('--dataset_file_path', type=str, help='the path pointing to the dataset')
 parser.add_argument('--depth_alignment', type=str, default='TRUE', choices=['TRUE', 'FALSE'], help='Activate Depth Alignment or Not')
-parser.add_argument('--vis_res', type=str,default='TRUE', choices=['TRUE', 'FALSE'], help='Activate Saving Visualization Result')
+parser.add_argument('--csv_file', type=str, default="metric.csv", help='Save Metric to CSV file')
+parser.add_argument('--vis_res', type=str,default='FALSE', choices=['TRUE', 'FALSE'], help='Activate Saving Visualization Result')
 parser.add_argument('--img_size', default=518, type=int)
 parser.add_argument('--min_depth', default=0.1, type=float)
 parser.add_argument('--max_depth', default=60, type=float)
@@ -105,7 +107,11 @@ def main():
     
     model, transform = depth_pro.create_model_and_transforms(device=local_rank)
     
-    model.cuda(local_rank)    
+    # model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    model.cuda(local_rank)
+    # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], broadcast_buffers=False,
+    #                                                   output_device=local_rank, find_unused_parameters=True)
+    
     
     previous_best = {'d1': 0, 'd2': 0, 'd3': 0, 'abs_rel': 100, 'sq_rel': 100, 'rmse': 100, 'rmse_log': 100, 'log10': 100, 'silog': 100, 'mae':100}
         
@@ -133,6 +139,7 @@ def main():
         image, _, f_px = depth_pro.load_rgb(img_pil)
         image = transform(image)
 
+        # cv2.imwrite("temp.png", image.detach().cpu().numpy().astype(np.uint8))
         with torch.no_grad():
             pred = model.infer(image, f_px=f_px)["depth"]
         
@@ -140,13 +147,13 @@ def main():
         valid_mask = (valid_mask == 1) & (depth >= args.min_depth) & (depth <= args.max_depth)
 
         if args.depth_alignment == 'TRUE':
-            aligned_pred, _, _ = align_depth_least_squares(pred.cpu().numpy(), depth.cpu().numpy(), valid_mask.cpu().numpy().astype(np.uint8))
+            aligned_pred, _, _ = align_depth_least_squares(pred.cpu().numpy(), depth.cpu().numpy(), valid_mask.cpu().numpy())
             aligned_pred = np.clip(aligned_pred, a_min=args.min_depth, a_max=args.max_depth)
             pred = torch.tensor(aligned_pred, dtype=torch.float32, device=local_rank)
         
         # Add this after the cur_results line
-        if (rank == 0 and i % 10 == 0) and args.vis_res == 'TRUE':  # Visualize every 10th sample
-            import cv2
+        if i % 10 == 0 and args.vis_res == 'TRUE':  # Visualize every 10th sample
+            # import cv2
             import matplotlib.pyplot as plt
 
             # img_np = img.detach().cpu().numpy()
@@ -193,12 +200,14 @@ def main():
             plt.title("GT Depth")
             
             image_path = sample['image_path'][0]
+            print(f"image_path: {image_path}")
             timestamp = image_path.split()[0].split('/')[-1].split('.')[0]
             plt.savefig(f"/home/output/visualizations/GrandTour_depthpro/sample_{timestamp}.png")
             plt.close()
         
         if valid_mask.sum() < 10:
             continue
+        print(f"pred shape: {pred.shape}, depth shape: {depth.shape}, img shape: {img.shape} ")
         cur_results = eval_depth(pred[valid_mask], depth[valid_mask])
         
         for k in results.keys():
@@ -215,17 +224,29 @@ def main():
     dist.reduce(nsamples, dst=0)
     
     if rank == 0:
+        averaged_metrics = {k: (v / nsamples).item() for k, v in results.items()}
+    
         logger.info('==========================================================================================')
         logger.info('{:>8}, {:>8}, {:>8}, {:>8}, {:>8}, {:>8}, {:>8}, {:>8}, {:>8}, {:>8}'.format(*tuple(results.keys())))
         logger.info('{:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}, {:8.3f}'.format(*tuple([(v / nsamples).item() for v in results.values()])))
         logger.info('==========================================================================================')
         print()
     
-    for k in results.keys():
-        if k in ['d1', 'd2', 'd3']:
-            previous_best[k] = max(previous_best[k], (results[k] / nsamples).item())
-        else:
-            previous_best[k] = min(previous_best[k], (results[k] / nsamples).item())
+        csv_file = args.csv_file
+        with open(csv_file, mode='a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=results.keys())
+            
+            if f.tell() == 0:
+                writer.writeheader()
+            
+            writer.writerow(averaged_metrics)
+        
+        for k in results.keys():
+            if k in ['d1', 'd2', 'd3']:
+                previous_best[k] = max(previous_best[k], (results[k] / nsamples).item())
+            else:
+                previous_best[k] = min(previous_best[k], (results[k] / nsamples).item())
+
 
 
 if __name__ == '__main__':
