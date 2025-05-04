@@ -53,7 +53,7 @@ class GRANDTOUR(Dataset):
         sample['image'] = torch.from_numpy(sample['image'])
         sample['depth'] = torch.from_numpy(sample['depth'])
         print(f"sample['depth'] shape: {sample['depth'].shape}")
-        sample['valid_mask'] = (sample['depth'] <= 60) & (sample['depth'] > 0)
+        sample['valid_mask'] = (sample['depth'] <= 80) & (sample['depth'] > 0)
         
         sample['image_path'] = self.filelist[item].split(' ')[0]
         
