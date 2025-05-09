@@ -62,7 +62,8 @@ def eval_depth(pred, target):
 parser = argparse.ArgumentParser(description='Depth Pro for Metric Depth Estimation')
 
 parser.add_argument('--dataset', default='grandtour')
-parser.add_argument('--dataset_file_path', type=str, help='the path pointing to the dataset')
+parser.add_argument('--dataset_txt_path', type=str, help='the path pointing to the txt file')
+parser.add_argument('--dataset_root_dir', type=str, default='/mnt/GrandTour', help='the path pointing to the dataset')
 parser.add_argument('--depth_alignment', type=str, default='TRUE', choices=['TRUE', 'FALSE'], help='Activate Depth Alignment or Not')
 parser.add_argument('--csv_file', type=str, default="metric.csv", help='Save Metric to CSV file')
 parser.add_argument('--vis_res', type=str,default='FALSE', choices=['TRUE', 'FALSE'], help='Activate Saving Visualization Result')
@@ -94,10 +95,10 @@ def main():
         valset = KITTI('dataset/splits/kitti/val.txt', 'val', size=size)
     elif args.dataset == 'grandtour':
         from dataset.grandtour import GRANDTOUR
-        valset = GRANDTOUR(args.dataset_file_path, 'val', device=local_rank, parent_data_dir='/mnt/GrandTour')
+        valset = GRANDTOUR(args.dataset_txt_path, 'val', device=local_rank, parent_data_dir=args.dataset_root_dir)
     elif args.dataset == 'kitti':
         from dataset.kitti import KITTI
-        valset = KITTI(args.dataset_file_path, 'val', size=size) # parent_data_dir='/'.join(args.dataset_file_path.split('/')[:-2])
+        valset = KITTI(args.dataset_txt_path, 'val', size=size) # parent_data_dir='/'.join(args.dataset_txt_path.split('/')[:-2])
     
     else:
         raise NotImplementedError
@@ -197,7 +198,7 @@ def main():
                 
             
             # Create output dir
-            os.makedirs(f"/mnt/GrandTour/visualizations/{args.csv_file.split('/')[-1].split('.')[-2]}", exist_ok=True) # args.dataset_file_path.split('/')[-1].split('.')[-2]
+            os.makedirs(f"/mnt/GrandTour/visualizations/{args.csv_file.split('/')[-1].split('.')[-2]}", exist_ok=True) # args.dataset_txt_path.split('/')[-1].split('.')[-2]
                         
             # Add prediction visualization to the plot
             metrics_text = "\n".join([f"{k}: {v:.4f}" for k, v in cur_results.items()])

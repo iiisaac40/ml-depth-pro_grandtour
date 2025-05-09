@@ -1,3 +1,22 @@
+# Depth Pro for GrandTour Project
+### eval
+```bash
+cd evaluation
+
+## change the dataset_root_dir accordingly
+python eval.py \
+  --max_depth {max_depth} \
+  --dataset_txt_path {test_txt} \
+  --dataset_root_dir /mnt/GrandTour \
+  --csv_file {csv_file}  --port {master_port} --dataset grandtour --vis_res FALSE
+```
+
+To run eval in scale in cluster, refer to [evaluation/eval_depthpro_scale.py](evaluation/eval_depthpro_scale.py)
+
+
+
+# *The following are the original README.md*
+
 ## Depth Pro: Sharp Monocular Metric Depth in Less Than a Second
 
 This software project accompanies the research paper:
